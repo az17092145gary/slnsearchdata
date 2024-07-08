@@ -6,6 +6,8 @@
         public string? Product_Name { get; set; }
         public string? PCS { get; set; }
         public string? Model { get; set; }
+        public string? ReMark { get; set; }
         public string? Type {  get; set; }
+        
     }
 }

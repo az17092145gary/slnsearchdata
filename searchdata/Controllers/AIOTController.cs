@@ -109,10 +109,10 @@ namespace searchdata.Controllers
             }
         }
         [HttpGet("getErrData")]
-        public dynamic getAVGErrData(string startTime, string endTime, string item, string product, string line, string type, string device, string? avg)
+        public dynamic getAVGErrData(string startTime, string endTime, string item, string product, string line, string type, string device, string? avg, string? reporttype)
         {
-            var list = _Service.getErrData(startTime, endTime, item, product, line, type, device, avg);
-            if (list.Count > 0)
+            var list = _Service.getErrData(startTime, endTime, item, product, line, type, device, avg, reporttype);
+            if (list != null)
             {
                 var result = JsonSerializer.Serialize(list, options);
                 return Ok(result);
