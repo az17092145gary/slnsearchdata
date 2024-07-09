@@ -27,7 +27,7 @@ namespace searchdata.Model
             switch (reporttype)
             {
                 case "date":
-                    _sql = $"SELECT * FROM [AIOT].[dbo].[Line_MachineData] WHERE Item = @item AND Product = @product AND Date BETWEEN @startTime AND @endTime AND Line = @line Order by Date";
+                    _sql = $"SELECT * FROM [AIOT].[dbo].[Line_MachineData] WHERE Item = @item AND Product = @product AND Date BETWEEN @startTime AND @endTime AND Line = @line ORDER BY Date";
                     using (SqlConnection connection = new SqlConnection(connectionString))
                     {
                         datalist.AddRange(connection.Query<machineData>(_sql, new { startTime, endTime, item, product, line }).ToList());
@@ -413,9 +413,9 @@ namespace searchdata.Model
         {
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                _sql = $"SELECT Line,AVG(CAST({frontMoreLineData.selectType} as float)) AS Value ";
+                _sql = $"SELECT Line,AVG(CAST({frontMoreLineData.selectType} AS FLOAT)) AS Value ";
                 _sql += " FROM [AIOT].[dbo].[Line_MachineData] ";
-                _sql += " WHERE Item = @item AND Product = @product AND DATE BETWEEN @startDate AND @endDate AND Line IN @arrLine Group by Line Order by Value desc";
+                _sql += " WHERE Item = @item AND Product = @product AND DATE BETWEEN @startDate AND @endDate AND Line IN @arrLine GROUP BY Line ORDER BY Value DESC";
                 var datalist = connection.Query<BackMoreLineData>(_sql, frontMoreLineData).ToList();
                 return datalist;
             }
@@ -432,7 +432,7 @@ namespace searchdata.Model
                 _sql += " LEFT JOIN [AIOT].[dbo].[Product] AS P ON PPL.ProductID = P.ProductID ";
                 _sql += " LEFT JOIN [AIOT].[dbo].[Item] AS I ON P.ItemID = I.ItemID ";
                 //_sql += " LEFT JOIN [AIOT].[dbo].[Factory] AS F ON F.IODviceName = LMS.DeviceName ";
-                _sql += " WHERE I.ItemName = @item AND P.ProductName = @product AND PL.LineName IN @arrLine GROUP BY PL.LineName Order by Value desc ";
+                _sql += " WHERE I.ItemName = @item AND P.ProductName = @product AND PL.LineName IN @arrLine GROUP BY PL.LineName ORDER BY Value DESC ";
                 var datalist = connection.Query<BackMoreLineData>(_sql, frontMoreLineData).ToList();
                 return datalist;
             }
@@ -468,13 +468,13 @@ namespace searchdata.Model
         public dynamic getStopTimeTableERRCode(string strrtime, string endtime, string device)
         {
             var strtemp = Convert.ToDateTime(strrtime).AddSeconds(-10).ToString("yyyy-MM-dd HH:mm:ss.fff");
-            _sql = "SELECT (select DeviceName FROM [AIOT].[dbo].[Machine] where IODviceName = MD.DeviceName) as DeviceName,MD.TIME, MD.Description ";
-            _sql += " FROM [AIOT].[dbo].[Machine_Data] as MD ";
-            _sql += $" where MD.DeviceName = (select IODviceName FROM [AIOT].[dbo].[Machine] where DeviceName = '{device}')";
-            _sql += $" and MD.TIME between '{strtemp}' and '{endtime}'";
-            _sql += " and (MD.NAME like '%PAT%' or MD.NAME like '%ERR%')";
-            _sql += " and MD.VALUE = '1'";
-            _sql += " order by TIME desc";
+            _sql = "SELECT (SELECT DeviceName FROM [AIOT].[dbo].[Machine] WHERE IODviceName = MD.DeviceName) AS DeviceName,MD.TIME, MD.Description ";
+            _sql += " FROM [AIOT].[dbo].[Machine_Data] AS MD ";
+            _sql += $" WHERE MD.DeviceName = (SELECT IODviceName FROM [AIOT].[dbo].[Machine] WHERE DeviceName = '{device}')";
+            _sql += $" AND MD.TIME BETWEEN '{strtemp}' AND '{endtime}'";
+            _sql += " AND (MD.NAME LIKE '%PAT%' OR MD.NAME LIKE '%ERR%')";
+            _sql += " AND MD.VALUE = '1'";
+            _sql += " ORDER BY TIME DESC";
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
                 var datalist = connection.Query<StopTimeTableERRCode>(_sql).ToList();
@@ -497,12 +497,12 @@ namespace searchdata.Model
                     _sql += " , LM.Name";
                     _sql += " , LM.Count";
                     _sql += " ,LMD.ETC AS AllTime";
-                    _sql += " ,(select Count(M.IODviceName) FROM [AIOT].[dbo].[Machine] AS M ";
+                    _sql += " ,(SELECT Count(M.IODviceName) FROM [AIOT].[dbo].[Machine] AS M ";
                     _sql += " LEFT JOIN [AIOT].[dbo].[ProductProductionLines] AS PPL ON PPL.id = M.ProductProductionLinesID ";
                     _sql += " LEFT JOIN [AIOT].[dbo].[ProductLine] AS PL ON PL.LineID = PPL.LineID ";
                     _sql += " LEFT JOIN [AIOT].[dbo].[Product] AS P ON PPL.ProductID = P.ProductID ";
                     _sql += " LEFT JOIN [AIOT].[dbo].[Item] AS I ON P.ItemID = I.ItemID ";
-                    _sql += $" WHERE I.ItemName ='{item}' AND P.ProductName = '{product}' AND PL.LineName = '{line}') as deviceCount ";
+                    _sql += $" WHERE I.ItemName ='{item}' AND P.ProductName = '{product}' AND PL.LineName = '{line}') AS deviceCount ";
                     _sql += $" FROM (SELECT * FROM [AIOT].[dbo].[Line_MachineERRData] WHERE Date BETWEEN '{startTime}' AND '{endTime}' AND Type = 'ERR') AS LM ";
                     _sql += " LEFT JOIN [AIOT].[dbo].[Machine] AS M ON M.IODviceName = LM.DeviceName ";
                     _sql += " LEFT JOIN [AIOT].[dbo].[ProductProductionLines] AS PPL ON PPL.id = M.ProductProductionLinesID ";
@@ -803,7 +803,7 @@ namespace searchdata.Model
                         var createPCSdatalist = connection.Query(_sql, scm).ToList();
                         if (createPCSdatalist.Count == 0)
                         {
-                            _sql = "INSERT INTO [AIOT].[dbo].[Standard_Production_Efficiency_Benchmark]VALUES(@Part_No,@Product_Name,@PCS,@Model)";
+                            _sql = "INSERT INTO [AIOT].[dbo].[Standard_Production_Efficiency_Benchmark]VALUES(@Part_No,@Product_Name,@PCS,@Model,@ReMark)";
                             var count = connection.Execute(_sql, scm);
                             check = count > 0 ? true : false;
                         }
@@ -837,13 +837,13 @@ namespace searchdata.Model
         {
             string date = DateTime.Now.ToString("yyyy-MM-dd");
             //date = "2024-04-29";
-            _sql = $"select * ";
-            _sql += $" from (SELECT PL.LineName,P.ProductName ";
-            _sql += " FROM [AIOT].[dbo].[Item] as I ";
-            _sql += " Join [AIOT].[dbo].[Product] as P on P.ItemID = I.ItemID ";
-            _sql += " Join [AIOT].[dbo].[ProductProductionLines] as PPL on PPL.ProductID = P.ProductID ";
-            _sql += $" Join [AIOT].[dbo].[ProductLine] as PL on PL.LineID = PPL.[LineID] where I.ItemName = '{item}') as AA ";
-            _sql += $" join [AIOT].[dbo].[KanBan_Line_MachineData] as LM on LM.Line = AA.LineName AND LM.Date = '{date}' AND LM.Product = aa.ProductName  AND State <> '完成' order by AA.LineName";
+            _sql = $"SELECT * ";
+            _sql += $" FROM (SELECT PL.LineName,P.ProductName ";
+            _sql += " FROM [AIOT].[dbo].[Item] AS I ";
+            _sql += " JOIN [AIOT].[dbo].[Product] AS P on P.ItemID = I.ItemID ";
+            _sql += " JOIN [AIOT].[dbo].[ProductProductionLines] AS PPL on PPL.ProductID = P.ProductID ";
+            _sql += $" JOIN [AIOT].[dbo].[ProductLine] AS PL on PL.LineID = PPL.[LineID] WHERE I.ItemName = '{item}') AS AA ";
+            _sql += $" JOIN [AIOT].[dbo].[KanBan_Line_MachineData] AS LM on LM.Line = AA.LineName AND LM.Date = '{date}' AND LM.Product = aa.ProductName  AND State <> '完成' ORDER BY AA.LineName";
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
                 var datalist = connection.Query<KanBanData>(_sql).ToList();
