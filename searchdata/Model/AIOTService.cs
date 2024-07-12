@@ -218,19 +218,32 @@ namespace searchdata.Model
         {
             foreach (var data in listWeek)
             {
-                _sql = @" WITH LM_CTE AS (SELECT M.IODviceName AS DeviceName, PL.[LineName] AS ProductLine, LM.Date, LM.Time, LM.Type, LM.Name, LM.Count ";
-                _sql += $" FROM (SELECT * FROM [AIOT].[dbo].[Line_MachineERRData] WHERE Date BETWEEN '{data.startDate}' AND '{data.endDate}' AND Type = '{type}') AS LM";
-                _sql += " LEFT JOIN [AIOT].[dbo].[Machine] AS M ON M.IODviceName = LM.DeviceName";
-                _sql += " LEFT JOIN [AIOT].[dbo].[ProductProductionLines] AS PPL ON PPL.id = M.ProductProductionLinesID";
-                _sql += " LEFT JOIN [AIOT].[dbo].[ProductLine] AS PL ON PL.LineID = PPL.LineID";
+                _sql = " SELECT M.IODviceName AS DeviceName ";
+                _sql += ", LM.Date";
+                _sql += " , LM.Type";
+                _sql += ", LM.Name";
+                _sql += ", LM.Count ";
+                //周、月報AO、YieIdAO、AllNGS撈取整個周或整個月的全部資訊
+                _sql += ", CASE WHEN M.Defective = '1' AND M.Throughput = '1'";
+                _sql += " THEN (SELECT SUM(TRY_CAST(TLMD.AO AS int))";
+                _sql += " FROM [AIOT].[dbo].[Line_MachineData] AS TLMD ";
+                _sql += $" WHERE TLMD.Date BETWEEN '{data.startDate}' AND '{data.endDate}' AND TLMD.Item = '{item}' AND TLMD.Product = '{product}' AND TLMD.Line = '{line}')";
+                _sql += " WHEN M.Defective = '1' AND M.Throughput = '0' ";
+                _sql += " THEN (SELECT SUM(TRY_CAST(TLMD.YieIdAO AS int)) ";
+                _sql += " FROM [AIOT].[dbo].[Line_MachineData] AS TLMD ";
+                _sql += $" WHERE TLMD.Date BETWEEN '{data.startDate}' AND '{data.endDate}' AND TLMD.Item = '{item}' AND TLMD.Product = '{product}' AND TLMD.Line = '{line}') END AS AO";
+                _sql += ", (SELECT SUM(TRY_CAST(TLMD.AllNGS AS int))";
+                _sql += " FROM [AIOT].[dbo].[Line_MachineData] AS TLMD ";
+                _sql += $" WHERE TLMD.Date BETWEEN '{data.startDate}' AND '{data.endDate}' AND TLMD.Item = '{item}' AND TLMD.Product = '{product}' AND TLMD.Line = '{line}')  AS AllNGS ";
+
+                _sql += $" FROM (SELECT * FROM [AIOT].[dbo].[Line_MachineERRData] WHERE Date BETWEEN  '{data.startDate}' AND '{data.endDate}' AND Type = '{type}') AS LM ";
+                _sql += " LEFT JOIN [AIOT].[dbo].[Machine] AS M ON M.IODviceName = LM.DeviceName ";
+                _sql += " LEFT JOIN [AIOT].[dbo].[ProductProductionLines] AS PPL ON PPL.id = M.ProductProductionLinesID ";
+                _sql += "LEFT JOIN [AIOT].[dbo].[ProductLine] AS PL ON PL.LineID = PPL.LineID ";
                 _sql += " LEFT JOIN [AIOT].[dbo].[Product] AS P ON PPL.ProductID = P.ProductID";
                 _sql += " LEFT JOIN [AIOT].[dbo].[Item] AS I ON P.ItemID = I.ItemID";
-                _sql += $"  WHERE I.ItemName = '{item}' AND P.ProductName = '{product}' AND PL.LineName = '{line}' ";
-                _sql += device == "All" ? " )" : $" AND M.DeviceName = '{device}')";
-                _sql += " SELECT DeviceName,ProductLine,REPLACE(REPLACE(REPLACE(REPLACE(Time, CHAR(13) + CHAR(10), CHAR(13)), ' ',' '), CHAR(10)+CHAR(10), CHAR(10)),CHAR(10), '\n') AS Time,Date,Type,Name,Count";
-                _sql += " FROM LM_CTE";
-                _sql += " WHERE Count <> 0";
-                _sql += " ORDER BY Date DESC, CAST(Count AS INT) DESC ";
+                _sql += $" LEFT JOIN [AIOT].[dbo].[Line_MachineData] AS LMD ON LMD.Date = LM.Date AND LMD.Item = '{item}' AND LMD.Product = '{product}' AND LMD.Line = '{line}' ";
+                _sql += $" WHERE I.ItemName = '{item}' AND P.ProductName = '{product}' AND PL.LineName = '{line}' ORDER BY Date DESC";
                 var tempdata = connection.Query<OneLineERROrder>(_sql).ToList();
                 if (tempdata != null)
                 {
@@ -567,7 +580,7 @@ namespace searchdata.Model
                     ERRName,
                     y.Count,
                 };
-            }).OrderBy(x=>x.Date).ToList();
+            }).OrderBy(x => x.Date).ToList();
 
             var reportData = new
             {
@@ -585,19 +598,23 @@ namespace searchdata.Model
                 switch (reporttype)
                 {
                     case "date":
-                        _sql = @" WITH LM_CTE AS (SELECT M.IODviceName AS DeviceName, PL.[LineName] AS ProductLine, LM.Date, LM.Time, LM.Type, LM.Name, LM.Count ";
-                        _sql += $" FROM (SELECT * FROM [AIOT].[dbo].[Line_MachineERRData] WHERE Date BETWEEN '{startTime}' AND '{endTime}' AND Type = '{type}') AS LM";
-                        _sql += " LEFT JOIN [AIOT].[dbo].[Machine] AS M ON M.IODviceName = LM.DeviceName";
-                        _sql += " LEFT JOIN [AIOT].[dbo].[ProductProductionLines] AS PPL ON PPL.id = M.ProductProductionLinesID";
-                        _sql += " LEFT JOIN [AIOT].[dbo].[ProductLine] AS PL ON PL.LineID = PPL.LineID";
+                        //日報AO、YieIdAO、AllNGS撈取對應天的資訊
+                        _sql = " SELECT M.IODviceName AS DeviceName ";
+                        _sql += ", LM.Date";
+                        _sql += " , LM.Type";
+                        _sql += ", LM.Name";
+                        _sql += ", LM.Count ";
+                        _sql += ", CASE WHEN M.Defective = '1' AND M.Throughput = '1' THEN LMD.AO";
+                        _sql += " WHEN M.Defective = '1' AND M.Throughput = '0' THEN LMD.YieIdAO END AS AO";
+                        _sql += ", LMD.AllNGS";
+                        _sql += $" FROM (SELECT * FROM [AIOT].[dbo].[Line_MachineERRData] WHERE Date BETWEEN  '{startTime}' AND '{endTime}' AND Type = '{type}') AS LM ";
+                        _sql += " LEFT JOIN [AIOT].[dbo].[Machine] AS M ON M.IODviceName = LM.DeviceName ";
+                        _sql += " LEFT JOIN [AIOT].[dbo].[ProductProductionLines] AS PPL ON PPL.id = M.ProductProductionLinesID ";
+                        _sql += "LEFT JOIN [AIOT].[dbo].[ProductLine] AS PL ON PL.LineID = PPL.LineID ";
                         _sql += " LEFT JOIN [AIOT].[dbo].[Product] AS P ON PPL.ProductID = P.ProductID";
                         _sql += " LEFT JOIN [AIOT].[dbo].[Item] AS I ON P.ItemID = I.ItemID";
-                        _sql += $"  WHERE I.ItemName = '{item}' AND P.ProductName = '{product}' AND PL.LineName = '{line}' ";
-                        _sql += device == "All" ? " )" : $" AND M.DeviceName = '{device}')";
-                        _sql += " SELECT DeviceName,ProductLine,REPLACE(REPLACE(REPLACE(REPLACE(Time, CHAR(13) + CHAR(10), CHAR(13)), ' ',' '), CHAR(10)+CHAR(10), CHAR(10)),CHAR(10), '\n') AS Time,Date,Type,Name,Count";
-                        _sql += " FROM LM_CTE";
-                        _sql += " WHERE Count <> 0";
-                        _sql += " ORDER BY Date DESC, CAST(Count AS INT) DESC ";
+                        _sql += $" LEFT JOIN [AIOT].[dbo].[Line_MachineData] AS LMD ON LMD.Date = LM.Date AND LMD.Item = '{item}' AND LMD.Product = '{product}' AND LMD.Line = '{line}' ";
+                        _sql += $" WHERE I.ItemName = '{item}' AND P.ProductName = '{product}' AND PL.LineName = '{line}' ORDER BY Date DESC";
                         datalist.AddRange(connection.Query<OneLineERROrder>(_sql).ToList());
 
                         break;
@@ -607,7 +624,7 @@ namespace searchdata.Model
                         var endWeekYear = Convert.ToInt32(endTime.Split('-')[0]);
                         var countWeekYear = endWeekYear - startWeekYear;
                         var startWeek = Convert.ToInt32(startTime.Split("-")[1].Split("W")[1]);
-                        //如果年份不一樣就乘上差異加到endWeek
+                        //年份不一樣乘上差異加到endWeek
                         var endWeek = countWeekYear > 0 ? Convert.ToInt32(endTime.Split("-")[1].Split("W")[1]) + (countWeekYear * 52) : Convert.ToInt32(endTime.Split("-")[1].Split("W")[1]);
                         var countWeek = endWeek - startWeek;
                         for (int i = 0; i <= countWeek; i++)
@@ -629,7 +646,7 @@ namespace searchdata.Model
                         var endtMonthYear = Convert.ToInt32(endTime.Split('-')[0]);
                         var countMonthYear = endtMonthYear - startMonthYear;
                         var startMonth = Convert.ToInt32(startTime.Split("-")[1]);
-                        //如果年份不一樣就乘上差異加到endWeek
+                        //年份不一樣乘上差異加到endWeek
                         var endMonth = countMonthYear > 0 ? Convert.ToInt32(endTime.Split("-")[1]) + (countMonthYear * 12) : Convert.ToInt32(endTime.Split("-")[1]);
                         var countMonth = endMonth - startMonth;
                         for (int i = 0; i <= countMonth; i++)
@@ -649,7 +666,7 @@ namespace searchdata.Model
                 {
                     return datalist;
                 }
-                //整理寄存器、錯誤訊息
+                //拆Name分成寄存器、錯誤訊息
                 foreach (var itemdata in datalist)
                 {
                     var temp = itemdata.Name.Split('_');
@@ -657,29 +674,32 @@ namespace searchdata.Model
                     itemdata.ERRName = temp.Length > 2 ? temp[2] : temp[1].Split(' ').Length > 1 ? temp[1].Split(' ')[1] : temp[1].Split(' ')[0];
                 }
 
-                //周、月報資料整理
-                if (reporttype != "date")
+                //不良率(NoYieId) 不良數 ／總投入數 × 100
+                //不良佔比(Proportion)：不良數 ／總不良數 × 100%
+                var reportdatalist = datalist.GroupBy(x => new { x.DeviceName, x.Date, x.Deposit, x.ERRName }).Select(y =>
                 {
-                    var tempdatalist = datalist.GroupBy(x => new { x.DeviceName, x.Date, x.Deposit, x.ERRName }).Select(y =>
+                    var Count = y.Sum(z => Convert.ToInt32(z.Count));
+                    var AO = y.Max(z => Convert.ToInt32(z.AO));
+                    var AllNGS = y.Max(z => Convert.ToInt32(z.AllNGS));
+                    //如果取第二位小數點如果是0的話，改取第三位小數點
+                    var NoYieId = Math.Round((Convert.ToDouble(Count) / Convert.ToDouble(AO)) * 100, 2) == 0.00 ? Math.Round((Convert.ToDouble(Count) / Convert.ToDouble(AO)) * 100, 3) : Math.Round((Convert.ToDouble(Count) / Convert.ToDouble(AO)) * 100, 2);
+                    var Proportion = Math.Round((Convert.ToDouble(Count) / Convert.ToDouble(AllNGS)) * 100, 2);
+
+                    return new
                     {
-                        var Time = string.Join("\n", y.Select(x => x.Time.Trim())).Trim();
-                        return new
-                        {
-                            y.Key.DeviceName,
-                            y.Key.Date,
-                            y.Key.Deposit,
-                            y.Key.ERRName,
-                            Time,
-                            Count = y.Sum(z => Convert.ToInt32(z.Count))
-                        };
-                    }).OrderByDescending(x => x.Date).ThenByDescending(x => x.Count).ToList();
+                        y.Key.DeviceName,
+                        y.Key.Date,
+                        y.Key.Deposit,
+                        y.Key.ERRName,
+                        Count,
+                        NoYieId,
+                        Proportion,
+                        AO,
+                        AllNGS,
+                    };
+                }).OrderByDescending(x => x.Date).ThenByDescending(x => x.Count).ToList();
 
-                    return tempdatalist;
-                }
-
-                return datalist;
-
-
+                return reportdatalist;
             }
         }
 
