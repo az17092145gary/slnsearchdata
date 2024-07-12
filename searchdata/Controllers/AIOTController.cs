@@ -7,10 +7,12 @@ using System.Text.Json.Serialization;
 
 namespace searchdata.Controllers
 {
+    
     [ApiController]
     [Route("[Controller]")]
     public class AIOTController : ControllerBase
     {
+        //注入_Service
         private readonly AIOTService _Service;
         private JsonSerializerOptions options;
         public AIOTController(AIOTService service)

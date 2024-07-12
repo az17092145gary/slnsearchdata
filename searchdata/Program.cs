@@ -4,10 +4,12 @@ using searchdata.Model;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+//排除跨網域的問題
 builder.Services.AddCors(p => p.AddPolicy("corsapp", builder =>
 {
     builder.WithOrigins("*").AllowAnyMethod().AllowAnyHeader();
 }));
+
 builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
 
 builder.Services.AddSingleton<AIOTService>();
@@ -29,6 +31,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+//排除跨網域的問題
 app.UseCors("corsapp");
 app.UseAuthorization();
 
