@@ -683,7 +683,9 @@ namespace searchdata.Model
                     var AllNGS = y.Max(z => Convert.ToInt32(z.AllNGS));
                     //如果取第二位小數點如果是0的話，改取第三位小數點
                     var NoYieId = Math.Round((Convert.ToDouble(Count) / Convert.ToDouble(AO)) * 100, 2) == 0.00 ? Math.Round((Convert.ToDouble(Count) / Convert.ToDouble(AO)) * 100, 3) : Math.Round((Convert.ToDouble(Count) / Convert.ToDouble(AO)) * 100, 2);
+                    NoYieId = double.IsInfinity(NoYieId) ? 0 : NoYieId;
                     var Proportion = Math.Round((Convert.ToDouble(Count) / Convert.ToDouble(AllNGS)) * 100, 2);
+                    Proportion = double.IsInfinity(Proportion) ? 0 : Proportion;
 
                     return new
                     {
